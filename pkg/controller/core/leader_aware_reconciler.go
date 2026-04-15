@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -77,8 +78,12 @@ func (r *leaderAwareReconciler) Reconcile(ctx context.Context, request reconcile
 		return r.delegate.Reconcile(ctx, request)
 	default:
 		if err := r.client.Get(ctx, request.NamespacedName, r.object); err != nil {
-			// Discard request if not found, to prevent from re-enqueueing indefinitely.
-			return ctrl.Result{}, client.IgnoreNotFound(err)
+			if apierrors.IsNotFound(err) {
+				// Delegate not found requests so reconcilers can clean up in-memory state
+				// after delete events while this replica is still a follower.
+				return r.delegate.Reconcile(ctx, request)
+			}
+			return ctrl.Result{}, err
 		}
 		// The manager hasn't been elected leader yet, requeue the reconciliation request
 		// to prevent against any missed / discarded events over the period it takes
