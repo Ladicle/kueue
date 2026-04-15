@@ -45,6 +45,8 @@ type candidateElem struct {
 	wl *workload.Info
 	// lca of this queue and cq (queue to which the new workload is submitted)
 	lca *schdcache.CohortSnapshot
+	// candidate occupies a TAS flavor that is relevant to the preempting workload
+	usesTASFlavor bool
 	// candidates above priority threshold cannot be preempted if at the same time
 	// cq would borrow from other queues/cohorts
 	preemptionVariant preemptionVariant
@@ -56,6 +58,18 @@ func WorkloadUsesResources(wl *workload.Info, frsNeedPreemption sets.Set[resourc
 			if frsNeedPreemption.Has(resources.FlavorResource{Flavor: flv, Resource: res}) {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+func WorkloadUsesTASFlavor(wl *workload.Info, frsNeedPreemption sets.Set[resources.FlavorResource], tasFlavors sets.Set[kueue.ResourceFlavorReference]) bool {
+	if !wl.IsUsingTAS() {
+		return false
+	}
+	for fr := range frsNeedPreemption {
+		if tasFlavors.Has(fr.Flavor) {
+			return true
 		}
 	}
 	return false
@@ -138,6 +152,9 @@ func (c *candidateIterator) candidateIsValid(candidate *candidateElem, borrow bo
 	}
 	if borrow && candidate.preemptionVariant == ReclaimWithoutBorrowing {
 		return false
+	}
+	if candidate.usesTASFlavor {
+		return true
 	}
 	cq := c.snapshot.ClusterQueue(candidate.wl.ClusterQueue)
 	if schdcache.IsWithinNominalInResources(cq, c.frsNeedPreemption) {

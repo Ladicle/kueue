@@ -585,7 +585,7 @@ func (c *clusterQueue) updateWorkloadTASUsage(log logr.Logger, wi *workload.Info
 		// TAS cache is not synced yet so we defer accounting for TAS usage.
 		return
 	}
-	for tasFlavor, tasUsage := range wi.TASUsage() {
+	for tasFlavor, tasUsage := range workloadTASUsageForFlavorNames(wi, sets.KeySet(c.tasFlavors)) {
 		tasFlvCache := c.tasCache.Get(tasFlavor)
 		switch {
 		case tasFlvCache == nil:

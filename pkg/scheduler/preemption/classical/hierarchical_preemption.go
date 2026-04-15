@@ -78,8 +78,8 @@ func IsBorrowingWithinCohortForbidden(cq *schdcache.ClusterQueueSnapshot) (bool,
 
 // classifyPreemptionVariant evaluates, based on config and priorities, the
 // preemption type for a given candidate
-func classifyPreemptionVariant(ctx *HierarchicalPreemptionCtx, wl *workload.Info, haveHierarchicalAdvantage bool) preemptionVariant {
-	if !WorkloadUsesResources(wl, ctx.FrsNeedPreemption) {
+func classifyPreemptionVariant(ctx *HierarchicalPreemptionCtx, wl *workload.Info, usesTASFlavor, haveHierarchicalAdvantage bool) preemptionVariant {
+	if !WorkloadUsesResources(wl, ctx.FrsNeedPreemption) && !usesTASFlavor {
 		return Never
 	}
 
@@ -132,7 +132,8 @@ func collectSameQueueCandidates(ctx *HierarchicalPreemptionCtx) []*candidateElem
 func getCandidatesFromCQ(cq *schdcache.ClusterQueueSnapshot, lca *schdcache.CohortSnapshot, ctx *HierarchicalPreemptionCtx, hasHiearchicalAdvantage bool) []*candidateElem {
 	candidates := []*candidateElem{}
 	for _, candidateWl := range cq.Workloads {
-		preemptionVariant := classifyPreemptionVariant(ctx, candidateWl, hasHiearchicalAdvantage)
+		usesTASFlavor := WorkloadUsesTASFlavor(candidateWl, ctx.FrsNeedPreemption, sets.KeySet(cq.TASFlavors))
+		preemptionVariant := classifyPreemptionVariant(ctx, candidateWl, usesTASFlavor, hasHiearchicalAdvantage)
 		if preemptionVariant == Never {
 			continue
 		}
@@ -140,6 +141,7 @@ func getCandidatesFromCQ(cq *schdcache.ClusterQueueSnapshot, lca *schdcache.Coho
 			&candidateElem{
 				wl:                candidateWl,
 				lca:               lca,
+				usesTASFlavor:     usesTASFlavor,
 				preemptionVariant: preemptionVariant,
 			})
 	}

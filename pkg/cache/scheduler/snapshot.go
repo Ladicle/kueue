@@ -49,7 +49,7 @@ type Snapshot struct {
 func (s *Snapshot) RemoveWorkload(wl *workload.Info) {
 	cq := s.ClusterQueue(wl.ClusterQueue)
 	delete(cq.Workloads, workload.Key(wl.Obj))
-	cq.RemoveUsage(wl.Usage())
+	cq.RemoveUsage(workloadUsageForCQ(wl, cq))
 }
 
 // AddWorkload adds a workload to its corresponding ClusterQueue and
@@ -57,7 +57,7 @@ func (s *Snapshot) RemoveWorkload(wl *workload.Info) {
 func (s *Snapshot) AddWorkload(wl *workload.Info) {
 	cq := s.ClusterQueue(wl.ClusterQueue)
 	cq.Workloads[workload.Key(wl.Obj)] = wl
-	cq.AddUsage(wl.Usage())
+	cq.AddUsage(workloadUsageForCQ(wl, cq))
 }
 
 // SimulateWorkloadRemoval modifies the snapshot by removing the usage
@@ -71,7 +71,7 @@ func (s *Snapshot) SimulateWorkloadRemoval(workloads []*workload.Info) func() {
 	}
 	cqUsages := make([]cqUsage, 0, len(workloads))
 	for _, w := range workloads {
-		cqUsages = append(cqUsages, cqUsage{cq: w.ClusterQueue, usage: w.Usage()})
+		cqUsages = append(cqUsages, cqUsage{cq: w.ClusterQueue, usage: workloadUsageForCQ(w, s.ClusterQueue(w.ClusterQueue))})
 	}
 	for _, cqUsage := range cqUsages {
 		s.ClusterQueue(cqUsage.cq).RemoveUsage(cqUsage.usage)
