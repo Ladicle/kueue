@@ -66,7 +66,7 @@ func TestLeaderAwareReconcilerRequeuesWhileFollowerForExistingObject(t *testing.
 
 	r := newFollowerLeaderAwareReconciler(cl, delegate, requeueAfter)
 
-	gotResult, gotErr := r.Reconcile(context.Background(), reconcile.Request{
+	gotResult, gotErr := r.Reconcile(t.Context(), reconcile.Request{
 		NamespacedName: client.ObjectKeyFromObject(workloadObj),
 	})
 
